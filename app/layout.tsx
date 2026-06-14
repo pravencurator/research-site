@@ -25,11 +25,12 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return (
-    <html
-      lang="ko"
-      className={`${geistMono.variable} h-full antialiased scroll-smooth`}
-    >
+return (
+  <html
+    lang="ko"
+    className={`${geistMono.variable} h-full antialiased scroll-smooth`}
+    suppressHydrationWarning
+  >
       <head>
         <meta charSet="utf-8" />
         <meta httpEquiv="x-ua-compatible" content="ie=edge" />
