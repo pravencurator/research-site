@@ -266,6 +266,91 @@ export async function buildResearchContext(
 }
 
 // ---------------------------------------------------------------------------
+// Extended context with FMP/FRED/DART quant data
+// ---------------------------------------------------------------------------
+
+export interface RichResearchContext extends ResearchContext {
+  quantContext: string;
+  macroContext: string;
+  dartContext: string;
+  financialData: {
+    revenue?: number;
+    netIncome?: number;
+    roe?: number;
+    roic?: number;
+    ebitdaMargin?: number;
+    debtToEquity?: number;
+    evToEbitda?: number;
+    dcfIntrinsicValue?: number;
+    analystTargetPrice?: number;
+    analystConsensus?: string;
+  };
+}
+
+export async function buildRichResearchContext(
+  ticker: string
+): Promise<RichResearchContext> {
+  // Dynamic imports to avoid bundler issues in ts-node CJS context
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { buildRichDataContext } = require("../lib/data-sources") as typeof import("../lib/data-sources");
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { runFullQuantAnalysis } = require("../lib/quant") as typeof import("../lib/quant");
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { formatMacroContext } = require("../lib/data-sources/fred") as typeof import("../lib/data-sources/fred");
+
+  const [base, richData] = await Promise.all([
+    buildResearchContext(ticker),
+    buildRichDataContext(ticker),
+  ]);
+
+  const quant = await runFullQuantAnalysis(
+    ticker,
+    richData.fmp,
+    richData.macro,
+    richData.price.price
+  );
+
+  const latestIncome = richData.fmp.incomeStatements?.[0];
+  const latestMetrics = richData.fmp.keyMetrics?.[0];
+
+  const dartDisclosures = richData.dartDisclosures;
+  const dartContext =
+    dartDisclosures.length > 0
+      ? dartDisclosures
+          .slice(0, 5)
+          .map((d) => `- [${d.rcept_dt}] ${d.report_nm}`)
+          .join("\n")
+      : richData.irSummary.formattedForLLM;
+
+  return {
+    ...base,
+    price: {
+      ...base.price,
+      price: richData.price.price || base.price.price,
+      change: richData.price.change || base.price.change,
+      changePercent: richData.price.changePercent || base.price.changePercent,
+    },
+    quantContext: quant.formattedForLLM,
+    macroContext: formatMacroContext(richData.macro),
+    dartContext,
+    financialData: {
+      revenue: latestIncome?.revenue ? latestIncome.revenue / 1e6 : undefined,
+      netIncome: latestIncome?.netIncome ? latestIncome.netIncome / 1e6 : undefined,
+      roe: latestMetrics?.roe ? latestMetrics.roe * 100 : undefined,
+      roic: latestMetrics?.roic ? latestMetrics.roic * 100 : undefined,
+      ebitdaMargin: latestIncome?.ebitda && latestIncome?.revenue
+        ? (latestIncome.ebitda / latestIncome.revenue) * 100
+        : undefined,
+      debtToEquity: latestMetrics?.debtToEquity ?? undefined,
+      evToEbitda: latestMetrics?.evToEbitda ?? undefined,
+      dcfIntrinsicValue: quant.dcf?.intrinsicValue ?? richData.fmp.dcf?.dcf ?? undefined,
+      analystTargetPrice: richData.fmp.analystRating?.targetPrice ?? undefined,
+      analystConsensus: richData.fmp.analystRating?.ratingRecommendation ?? undefined,
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Report generation via Anthropic SDK
 // ---------------------------------------------------------------------------
 
@@ -303,30 +388,78 @@ function formatNewsBlock(items: NewsItem[]): string {
 
 export async function generateReport(ctx: ResearchContext): Promise<string> {
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const rich = ctx as RichResearchContext;
 
-  const systemPrompt = `당신은 기관급 주식 리서치 애널리스트입니다. 아래 품질 기준을 반드시 100% 준수하십시오.
+  const systemPrompt = `당신은 Goldman Sachs, Morgan Stanley, JP Morgan 수준의 기관급 주식 리서치 애널리스트입니다.
+아래의 분석 방법론을 반드시 적용하십시오.
 
-## 필수 품질 기준 (CLAUDE.md 기준)
-1. **제목**: 반드시 메타포 형식 (설명형 제목 절대 불가). 예: "불꽃 속의 다이아몬드" (O) / "삼성전자 실적 분석" (X)
-2. **블록 4 "시장이 놓친 알파"**: 없으면 리포트 미완성 — 반드시 포함
-3. **한 줄 결론**: 강세 논거 + 리스크 양면성을 한 문장으로 필수 포함
-4. **경쟁 포지셔닝 삼분법 표**: 1차수혜 / 보완 / 압박 세 열 필수
-5. **가격 반영도 평가**: 현재 주가가 어느 시나리오를 반영하는지 명시 필수
-6. **수치 표기**: 모든 핵심 수치에 (값 | 출처 | 날짜) 3종 세트 필수. 추정치는 "(추정)" 명시
-7. **자기 언어**: 분석 문장은 100% 재작성 (직접 인용 금지)
+## 분석 방법론 체계
 
-## 리포트 구조
-블록 1: 제목 + 한 줄 결론
+### 1. Goldman Sachs 수익률 분해 프레임워크
+총 기대수익률 = 이익성장률 + 멀티플 변화 + 배당수익률
+12개월 절대수익률 기준 투자의견: BUY(+15% 이상) / NEUTRAL(-15%~+15%) / SELL(-15% 이하)
+
+### 2. Morgan Stanley 시나리오 분석
+Bull(25%) / Base(50%) / Bear(25%) 3개 시나리오의 확률 가중 목표가 필수 제시
+ROIC > WACC: 가치창출, ROIC < WACC: 가치파괴 — 반드시 명시
+
+### 3. Fama-French 5팩터 리스크 분석
+제공된 팩터 스코어를 바탕으로: Value, Quality, Growth, Momentum, Profitability 해석
+컨빅션 스코어 80 이상 → 강력 매수 시그널
+
+### 4. Damodaran DCF 내재가치 분석 (NYU Stern)
+DCF 내재가치 vs 현재가 괴리율을 MoS(안전마진)으로 해석
+민감도 분석(WACC ±2%, 터미널 성장률 ±1%) 언급 필수
+
+### 5. IB급 Comps 분석 (Goldman Sachs / JP Morgan)
+섹터 중앙값 대비 프리미엄/할인: EV/EBITDA, P/E, P/B, EV/S 멀티플
+
+### 6. Porter's 5 Forces (Harvard Business School)
+경쟁강도 / 진입장벽 / 공급자교섭력 / 고객교섭력 / 대체재 위협
+
+### 7. 한국 기관 IB 관점 (삼성증권/미래에셋/KB증권)
+국내 수요처/공급망/정책 리스크 반영, 원화/달러 환율 민감도
+
+## 필수 품질 기준
+1. 제목: 반드시 메타포 형식 (설명형 제목 절대 불가)
+2. 블록 4 "시장이 놓친 알파": 반드시 포함
+3. 한 줄 결론: 강세 논거 + 리스크 양면성 한 문장
+4. 경쟁 포지셔닝 삼분법 표: 1차수혜 / 보완 / 압박
+5. 가격 반영도 평가: 현재가가 어느 시나리오를 반영하는지 명시
+6. 수치 표기: (값 | 출처 | 날짜) 3종 세트. 추정치는 "(추정)" 명시
+7. 자기 언어: 분석 문장 100% 재작성
+
+## 9-블록 리포트 구조
+블록 1: 제목 + 한 줄 결론 + 투자의견 (BUY/NEUTRAL/SELL) + 목표가
 블록 2: 주가 현황 및 밸류에이션
-블록 3: 경쟁 포지셔닝 삼분법 표
-블록 4: 시장이 놓친 알파 (핵심 차별 포인트)
-블록 5: 리스크 / 촉매
-블록 6: 가격 반영도 평가
-블록 7: 결론 및 투자 의견
+블록 3: Goldman Sachs 수익률 분해 + Morgan Stanley 3시나리오
+블록 4: Fama-French 팩터 스코어 분석
+블록 5: Damodaran DCF 내재가치 + 민감도
+블록 6: IB Comps (피어 멀티플 비교)
+블록 7: 시장이 놓친 알파 + Porter's 5 Forces
+블록 8: 리스크 / 촉매
+블록 9: 가격 반영도 평가 + 결론
 
 출력 형식: 마크다운`;
 
-  const userPrompt = `다음 데이터를 기반으로 ${ctx.company} (${ctx.ticker}) 풀 리서치 리포트를 작성하십시오.
+  const quantSection = rich.quantContext
+    ? `\n## 퀀트 분석 (Fama-French + DCF + Comps)\n${rich.quantContext}`
+    : "";
+  const macroSection = rich.macroContext
+    ? `\n## 거시경제 지표 (FRED)\n${rich.macroContext}`
+    : "";
+  const dartSection = rich.dartContext
+    ? `\n## DART/SEC 공시 및 IR 자료\n${rich.dartContext}`
+    : "";
+  const finSection = rich.financialData
+    ? `\n## 재무 데이터 (FMP)\n` +
+      Object.entries(rich.financialData)
+        .filter(([, v]) => v !== undefined)
+        .map(([k, v]) => `- ${k}: ${v}`)
+        .join("\n")
+    : "";
+
+  const userPrompt = `다음 데이터를 기반으로 ${ctx.company} (${ctx.ticker}) 풀 IB 리서치 리포트를 작성하십시오.
 
 ## 섹터
 ${ctx.sector}
@@ -339,12 +472,13 @@ ${ctx.peers.join(", ") || "없음"}
 
 ## 최근 뉴스 (최근 7일, 최대 10건)
 ${formatNewsBlock(ctx.news)}
+${finSection}${macroSection}${quantSection}${dartSection}
 
-위 데이터를 바탕으로 품질 기준을 모두 충족하는 완전한 리포트를 작성하십시오.`;
+위 데이터를 바탕으로 9-블록 IB급 리포트를 작성하십시오.`;
 
   const message = await client.messages.create({
-    model: "claude-sonnet-4-5",
-    max_tokens: 4096,
+    model: "claude-sonnet-4-6",
+    max_tokens: 6000,
     messages: [{ role: "user", content: userPrompt }],
     system: systemPrompt,
   });

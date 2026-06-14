@@ -15,7 +15,7 @@
 import * as path from "path";
 import * as fs from "fs";
 import {
-  buildResearchContext,
+  buildRichResearchContext,
   generateReport,
   reportFilePath,
   saveReport,
@@ -95,11 +95,11 @@ async function processTicker(
     return "skipped";
   }
 
-  console.log(`[${ticker}] 리서치 컨텍스트 수집 중...`);
+  console.log(`[${ticker}] 리서치 컨텍스트 수집 중 (FMP/FRED/DART/퀀트)...`);
 
   let ctx;
   try {
-    ctx = await buildResearchContext(ticker);
+    ctx = await buildRichResearchContext(ticker);
   } catch (err) {
     console.error(`[${ticker}] 데이터 수집 실패: ${(err as Error).message}`);
     return "error";
