@@ -2,5 +2,6 @@
 // This module creates one shared instance for the entire app.
 import YahooFinanceClass from "yahoo-finance2";
 
-const yahooFinance = new YahooFinanceClass();
+// suppressNotices: suppress the survey prompt that pollutes server logs
+const yahooFinance = new YahooFinanceClass({ suppressNotices: ["yahooSurvey"] });
 export default yahooFinance;
