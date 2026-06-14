@@ -226,5 +226,7 @@ author: \"AI Research Agent\"
           else
             DATE=$(date -u +"%Y-%m-%d")
             git commit -m "🤖 Daily Research Update: ${DATE}"
+            # Pull rebase to handle any commits pushed by daily-brief job
+            git pull --rebase https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git main || true
             git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
           fi

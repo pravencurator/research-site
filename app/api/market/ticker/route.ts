@@ -11,14 +11,14 @@ interface TickerData {
 }
 
 const TICKER_INDICES = [
-  { symbol: "^KSPI", label: "코스피", exchange: "KS" },
-  { symbol: "^GSPC", label: "S&P500", exchange: "" },
-  { symbol: "^CCMP", label: "NASDAQ", exchange: "" },
-  { symbol: "NVDA", label: "엔비디아", exchange: "" },
-  { symbol: "005930.KS", label: "삼성전자", exchange: "KS" },
-  { symbol: "000660.KS", label: "SK하이닉스", exchange: "KS" },
-  { symbol: "TSLA", label: "테슬라", exchange: "" },
-  { symbol: "322000.KS", label: "PSK", exchange: "KS" },
+  { symbol: "^KS11",    label: "코스피",    exchange: "KS" },
+  { symbol: "^GSPC",    label: "S&P500",   exchange: "" },
+  { symbol: "^IXIC",    label: "NASDAQ",   exchange: "" },
+  { symbol: "NVDA",     label: "엔비디아", exchange: "" },
+  { symbol: "005930.KS",label: "삼성전자", exchange: "KS" },
+  { symbol: "000660.KS",label: "SK하이닉스",exchange: "KS" },
+  { symbol: "TSLA",     label: "테슬라",   exchange: "" },
+  { symbol: "322000.KS",label: "PSK",      exchange: "KS" },
 ];
 
 // 폴백 데이터
