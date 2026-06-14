@@ -2,6 +2,7 @@ import { getAllReports } from "@/lib/reports";
 import BomTracker from "@/app/components/BomTracker";
 import ShortageTracker from "@/app/components/ShortageTracker";
 import CoverageScorecard from "@/app/components/CoverageScorecard";
+import NewHighsWidget from "@/app/components/NewHighsWidget";
 
 interface ReportPerformance {
   ticker: string;
@@ -161,7 +162,22 @@ export default function TerminalPage() {
             </div>
           </section>
 
-          {/* Section 5: Coming Events */}
+          {/* Section 5: 신고가 알림 */}
+          <section className="border-t border-dark-border pt-16">
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-2xl font-bold mb-2">
+                  신고가 알림 — 국내 주요 종목
+                </h2>
+                <p className="text-sm text-dark-muted">
+                  당일 종가 기준 52주 신고가 돌파/근접 종목
+                </p>
+              </div>
+              <NewHighsWidget />
+            </div>
+          </section>
+
+          {/* Section 6: Coming Events */}
           <section className="border-t border-dark-border pt-16">
             <div className="space-y-6">
               <div>
