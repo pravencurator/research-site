@@ -55,7 +55,8 @@ async function fetchFromAlphaVantage(
 
   try {
     const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(avSymbol)}&apikey=${apiKey}`;
-    const res = await fetch(url, { next: { revalidate: 3600 } });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const res = await fetch(url, { next: { revalidate: 3600 } } as any);
     if (!res.ok) return null;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

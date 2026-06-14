@@ -46,7 +46,7 @@ async function fetchPriceData(ticker: string): Promise<PriceData> {
   // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-explicit-any
   const YFClass = require("yahoo-finance2").default as any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const yahooFinance: any = new YFClass();
+  const yahooFinance: any = new YFClass({ suppressNotices: ["yahooSurvey"] });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const quote: any = await yahooFinance.quote(ticker);
@@ -138,7 +138,7 @@ async function fetchYahooNews(
   // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-explicit-any
   const YFClass = require("yahoo-finance2").default as any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const yahooFinance: any = new YFClass();
+  const yahooFinance: any = new YFClass({ suppressNotices: ["yahooSurvey"] });
 
   try {
     const result = await (yahooFinance as unknown as {
@@ -493,7 +493,113 @@ ${finSection}${macroSection}${quantSection}${dartSection}
     .map((b) => (b as { type: "text"; text: string }).text)
     .join("\n");
 
-  return text;
+  return prependFrontmatter(text, ctx);
+}
+
+// ---------------------------------------------------------------------------
+// YAML Frontmatter generation
+// ---------------------------------------------------------------------------
+
+function extractTitle(text: string): string {
+  // Look for metaphor title in ## "..." or ## ... patterns
+  const patterns = [
+    /^##\s+["""](.+?)["""]/m,
+    /^##\s+"(.+?)"/m,
+    /^#\s+["""](.+?)["""]/m,
+    /제목.*?["""](.+?)["""]/m,
+    /^##\s+(.+)/m,
+  ];
+  for (const p of patterns) {
+    const m = text.match(p);
+    if (m) {
+      return m[1]
+        .replace(/🔬|🔷|🏆|⚡|💡|📊|🚀/g, "")
+        .replace(/^["""]+|["""]+$/g, "") // strip surrounding quotes
+        .replace(/"/g, "'") // replace inner double quotes with single
+        .trim();
+    }
+  }
+  return "";
+}
+
+function extractSummary(text: string): string {
+  // Look for 한 줄 결론 or summary line — extract clean plain text
+  const m = text.match(/한\s*줄\s*결론[^:：\n]*[:：]\s*>?\s*([^\n]{10,200})/);
+  if (m) {
+    return m[1]
+      .replace(/^\*+|\*+$/g, "") // strip bold markers
+      .replace(/["""]/g, "'")
+      .trim()
+      .slice(0, 120);
+  }
+  // Fallback: find first substantive non-heading line
+  const lines = text.split("\n").filter((l) => {
+    const t = l.trim();
+    return t.length > 20 && !t.startsWith("#") && !t.startsWith("---") && !t.startsWith("|");
+  });
+  return (lines[0] ?? "").replace(/["""]/g, "'").trim().slice(0, 120);
+}
+
+function buildTagsFromContext(ctx: ResearchContext): string[] {
+  const tags: string[] = [];
+  const sector = ctx.sector;
+  if (sector) tags.push(...sector.split("/").map((s) => s.trim()));
+  // Ticker-specific tags
+  const tickerTags: Record<string, string[]> = {
+    NVDA: ["Blackwell", "AI가속기", "CUDA"],
+    MU: ["HBM", "DRAM", "메모리"],
+    AMAT: ["반도체장비", "GAA", "CVD"],
+    LRCX: ["식각장비", "Etch", "반도체장비"],
+    "000660.KS": ["HBM3E", "SK하이닉스", "메모리"],
+    "042700.KS": ["TC본더", "HBM", "후공정"],
+    "322000.KS": ["Discom", "PR스트리퍼", "HBM"],
+    "005930.KS": ["HBM4", "삼성전자", "파운드리"],
+    "009150.KS": ["MLCC", "FC-BGA", "삼성전기"],
+    ARM: ["AI칩설계", "IP", "엣지AI"],
+    TSLA: ["EV", "자율주행", "에너지"],
+    "6857.T": ["SoC검사", "어드밴테스트", "HBM테스트"],
+    "8035.T": ["코터현상기", "도쿄일렉트론", "반도체장비"],
+    MRVL: ["커스텀AI칩", "ASIC", "데이터센터"],
+  };
+  tags.push(...(tickerTags[ctx.ticker] ?? []));
+  if (tags.length === 0) tags.push(ctx.ticker);
+  return [...new Set(tags)].slice(0, 5);
+}
+
+function prependFrontmatter(text: string, ctx: ResearchContext): string {
+  const title = extractTitle(text) || `${ctx.company} 리서치`;
+  const summary = extractSummary(text) || `${ctx.company} (${ctx.ticker}) IB급 풀 리서치 리포트`;
+  const tags = buildTagsFromContext(ctx);
+  const date = new Date().toISOString().split("T")[0];
+
+  // exchange
+  let exchange = "";
+  if (ctx.ticker.endsWith(".KS")) exchange = "KS";
+  else if (ctx.ticker.endsWith(".T")) exchange = "T";
+
+  // ticker (strip exchange suffix for display)
+  const displayTicker = ctx.ticker.replace(/\.(KS|T)$/i, "");
+
+  // sector — shorten for frontmatter
+  const sector = ctx.sector.split("/")[0].trim();
+
+  const tagsYaml = tags.map((t) => `"${t}"`).join(", ");
+
+  const frontmatter = `---
+title: "${title}"
+date: "${date}"
+ticker: "${displayTicker}"
+exchange: "${exchange}"
+sector: "${sector}"
+difficulty: "고급"
+tags: [${tagsYaml}]
+summary: "${summary.replace(/"/g, "'")}"
+author: "AI Research Agent"
+---
+
+`;
+
+  return frontmatter + text;
 }
 
 // ---------------------------------------------------------------------------

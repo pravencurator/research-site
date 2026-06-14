@@ -142,7 +142,8 @@ export async function searchNews(
     try {
       const tickerParam = tickers.join(",");
       const url = `https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=${encodeURIComponent(tickerParam)}&topics=technology,finance&limit=20&apikey=${apiKey}`;
-      const res = await fetch(url, { next: { revalidate: 300 } });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const res = await fetch(url, { next: { revalidate: 300 } } as any);
       if (res.ok) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const data: any = await res.json();
