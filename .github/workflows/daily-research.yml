@@ -52,5 +52,5 @@ jobs:
           else
             DATE=$(date -u +"%Y-%m-%d")
             git commit -m "🤖 Daily Research Update: ${DATE}"
-            git push origin HEAD
+            git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
           fi
