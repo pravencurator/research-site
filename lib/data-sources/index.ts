@@ -1,5 +1,9 @@
 import yahooFinance from "yahoo-finance2";
 
+export * from "./fmp";
+export * from "./fred";
+export * from "./dart";
+
 export interface StockPrice {
   symbol: string;
   price: number;
@@ -163,4 +167,36 @@ export async function fetchMultipleStocks(
     .filter((result) => result.status === "fulfilled")
     .map((result) => (result as PromiseFulfilledResult<StockPrice | null>).value)
     .filter((price): price is StockPrice => price !== null);
+}
+
+// ─────────────────────────────────────────────
+// buildRichDataContext: 모든 데이터 소스를 병렬로 조회
+// ─────────────────────────────────────────────
+
+export * from "./earnings-ir";
+
+import type { FMPFinancialData } from "./fmp";
+import type { MacroIndicators } from "./fred";
+import type { DARTDisclosure } from "./dart";
+import type { IRMaterialSummary } from "./earnings-ir";
+import { getFMPFinancialData } from "./fmp";
+import { getMacroIndicators } from "./fred";
+import { getDARTRecentDisclosures } from "./dart";
+import { getIRMaterialSummary } from "./earnings-ir";
+
+export async function buildRichDataContext(ticker: string): Promise<{
+  price: StockPrice;
+  fmp: FMPFinancialData;
+  macro: MacroIndicators;
+  dartDisclosures: DARTDisclosure[];
+  irSummary: IRMaterialSummary;
+}> {
+  const [price, fmp, macro, dartDisclosures, irSummary] = await Promise.all([
+    fetchStockPrice(ticker),
+    getFMPFinancialData(ticker),
+    getMacroIndicators(),
+    getDARTRecentDisclosures(ticker),
+    getIRMaterialSummary(ticker),
+  ]);
+  return { price, fmp, macro, dartDisclosures, irSummary };
 }

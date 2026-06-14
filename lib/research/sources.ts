@@ -61,37 +61,55 @@ export interface PeerCompanyData {
 // ─────────────────────────────────────────────
 
 export const RESEARCH_SOURCES: ResearchSource[] = [
-  // 글로벌 IB 리서치 (공개 자료만)
-  { name: "Goldman Sachs Research", type: "report", credibility: 0.95 },
-  { name: "Morgan Stanley Asia",    type: "report", credibility: 0.95 },
-  { name: "JP Morgan Korea",        type: "report", credibility: 0.93 },
-  { name: "UBS Tech Research",      type: "report", credibility: 0.90 },
+  // ── 글로벌 IB 리서치 ──────────────────────────────────────────────────────
+  { name: "Goldman Sachs Research",      type: "report", credibility: 0.97 },
+  { name: "Morgan Stanley Equity Research", type: "report", credibility: 0.96 },
+  { name: "JP Morgan Asia Equity",       type: "report", credibility: 0.95 },
+  { name: "UBS Tech Research",           type: "report", credibility: 0.92 },
+  { name: "Barclays Equity Research",    type: "report", credibility: 0.91 },
+  { name: "BofA Securities",             type: "report", credibility: 0.91 },
+  { name: "Bernstein Research",          type: "report", credibility: 0.93 },
+  { name: "CLSA Asia Research",          type: "report", credibility: 0.90 },
+  { name: "Jefferies Tech Research",     type: "report", credibility: 0.89 },
+  { name: "Citi Research",               type: "report", credibility: 0.91 },
 
-  // 뉴스
+  // ── 국내 증권사 리서치 ────────────────────────────────────────────────────
+  { name: "삼성증권 리서치센터",           type: "report", credibility: 0.92 },
+  { name: "미래에셋증권 리서치",           type: "report", credibility: 0.91 },
+  { name: "KB증권 리서치",               type: "report", credibility: 0.90 },
+  { name: "NH투자증권 리서치",            type: "report", credibility: 0.89 },
+  { name: "한국투자증권 리서치",           type: "report", credibility: 0.89 },
+  { name: "메리츠증권 리서치",            type: "report", credibility: 0.88 },
+  { name: "신한투자증권 리서치",           type: "report", credibility: 0.87 },
+  { name: "키움증권 리서치",             type: "report", credibility: 0.85 },
+  { name: "대신증권 리서치",             type: "report", credibility: 0.84 },
+  { name: "하나증권 리서치",             type: "report", credibility: 0.85 },
+
+  // ── 뉴스 ─────────────────────────────────────────────────────────────────
   { name: "Bloomberg Technology",          type: "news", credibility: 0.95 },
   { name: "Reuters Tech",                  type: "news", credibility: 0.93 },
+  { name: "The Information",               type: "news", credibility: 0.91 },
   { name: "Korea Herald Business",         type: "news", credibility: 0.85 },
   { name: "DigiTimes",                     type: "news", credibility: 0.88 },
   { name: "Nikkei Tech",                   type: "news", credibility: 0.87 },
-  { name: "Electronic Times (전자신문)",    type: "news", credibility: 0.83 },
+  { name: "Electronic Times (전자신문)",   type: "news", credibility: 0.83 },
+  { name: "매일경제 증권부",              type: "news", credibility: 0.82 },
+  { name: "한국경제 마켓인사이트",         type: "news", credibility: 0.83 },
 
-  // 한국 공시 데이터
-  {
-    name: "DART",
-    type: "filing",
-    credibility: 1.0,
-    url: "https://opendart.fss.or.kr",
-  },
-  {
-    name: "KRX 공시",
-    type: "filing",
-    credibility: 1.0,
-    url: "https://disclosure.krx.co.kr",
-  },
+  // ── 공시/IR 데이터 ────────────────────────────────────────────────────────
+  { name: "DART (전자공시)", type: "filing", credibility: 1.0, url: "https://opendart.fss.or.kr" },
+  { name: "DART IR 자료·수시공시", type: "filing", credibility: 1.0, url: "https://opendart.fss.or.kr" },
+  { name: "KRX 공시", type: "filing", credibility: 1.0, url: "https://disclosure.krx.co.kr" },
+  { name: "SEC EDGAR (8-K/10-Q/10-K)", type: "filing", credibility: 1.0, url: "https://www.sec.gov/cgi-bin/browse-edgar" },
+  { name: "회사 IR 자료 (기업설명회)", type: "filing", credibility: 0.95 },
+  { name: "실적 컨퍼런스콜 transcript", type: "filing", credibility: 0.95 },
 
-  // 데이터 소스
-  { name: "Yahoo Finance",  type: "data", credibility: 0.85 },
-  { name: "Alpha Vantage",  type: "data", credibility: 0.88 },
+  // ── 학술/퀀트 데이터 ──────────────────────────────────────────────────────
+  { name: "Kenneth French Data Library (Fama-French Factors)", type: "data", credibility: 0.99 },
+  { name: "FRED (St. Louis Fed)",  type: "data", credibility: 1.0, url: "https://fred.stlouisfed.org" },
+  { name: "Financial Modeling Prep", type: "data", credibility: 0.87 },
+  { name: "Alpha Vantage",         type: "data", credibility: 0.88 },
+  { name: "Yahoo Finance",         type: "data", credibility: 0.85 },
 ];
 
 // ─────────────────────────────────────────────
