@@ -16,8 +16,6 @@ export default function AdminPage() {
   const [isRunning, setIsRunning] = useState(false);
   const [selectedTickers, setSelectedTickers] = useState<string[]>([
     "005930.KS",
-    "000660.KS",
-    "322000.KS",
     "NVDA",
   ]);
 
@@ -101,6 +99,46 @@ export default function AdminPage() {
     );
   };
 
+  const ALL_TICKERS = [
+    "005930.KS", "000660.KS", "322000.KS", "042700.KS", "009150.KS",
+    "NVDA", "MRVL", "AMAT", "LRCX", "MU", "ARM",
+    "6857.T", "8035.T",
+  ];
+
+  const handleSelectAll = () => setSelectedTickers([...ALL_TICKERS]);
+  const handleDeselectAll = () => setSelectedTickers([]);
+
+  const TICKER_GROUPS = [
+    {
+      label: "한국 (KRX)",
+      tickers: [
+        { id: "005930.KS", name: "삼성전자" },
+        { id: "000660.KS", name: "SK하이닉스" },
+        { id: "322000.KS", name: "피에스케이홀딩스" },
+        { id: "042700.KS", name: "한미반도체" },
+        { id: "009150.KS", name: "삼성전기" },
+      ],
+    },
+    {
+      label: "미국 (US)",
+      tickers: [
+        { id: "NVDA", name: "엔비디아" },
+        { id: "MRVL", name: "마벨테크" },
+        { id: "AMAT", name: "어플라이드머터리얼즈" },
+        { id: "LRCX", name: "램리서치" },
+        { id: "MU", name: "마이크론" },
+        { id: "ARM", name: "암홀딩스" },
+      ],
+    },
+    {
+      label: "일본 (TSE)",
+      tickers: [
+        { id: "6857.T", name: "어드밴테스트" },
+        { id: "8035.T", name: "도쿄일렉트론" },
+      ],
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-dark-bg text-dark-fg">
       {/* Header */}
@@ -133,23 +171,43 @@ export default function AdminPage() {
                 <label className="text-xs text-dark-muted font-semibold block">
                   분석 종목 선택
                 </label>
-                <div className="space-y-2">
-                  {["005930.KS", "000660.KS", "322000.KS", "NVDA", "MRVL", "AMAT"].map(
-                    (ticker) => (
-                      <label
-                        key={ticker}
-                        className="flex items-center gap-2 cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedTickers.includes(ticker)}
-                          onChange={() => handleToggleTicker(ticker)}
-                          className="rounded accent-indigo-primary"
-                        />
-                        <span className="text-sm">{ticker}</span>
-                      </label>
-                    )
-                  )}
+                <div className="flex gap-2 mb-2">
+                  <button
+                    onClick={handleSelectAll}
+                    className="text-xs px-2 py-1 rounded bg-dark-border text-dark-muted hover:text-dark-fg hover:bg-dark-border/80 transition-colors"
+                  >
+                    전체 선택
+                  </button>
+                  <button
+                    onClick={handleDeselectAll}
+                    className="text-xs px-2 py-1 rounded bg-dark-border text-dark-muted hover:text-dark-fg hover:bg-dark-border/80 transition-colors"
+                  >
+                    선택 해제
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  {TICKER_GROUPS.map((group) => (
+                    <div key={group.label}>
+                      <p className="text-xs text-indigo-primary font-semibold mb-1">{group.label}</p>
+                      <div className="space-y-1">
+                        {group.tickers.map(({ id, name }) => (
+                          <label
+                            key={id}
+                            className="flex items-center gap-2 cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedTickers.includes(id)}
+                              onChange={() => handleToggleTicker(id)}
+                              className="rounded accent-indigo-primary"
+                            />
+                            <span className="text-sm font-mono">{id}</span>
+                            <span className="text-xs text-dark-muted">— {name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -239,7 +297,17 @@ export default function AdminPage() {
                       </div>
 
                       {/* Message */}
-                      <p className="text-sm text-dark-muted mb-2">{task.message}</p>
+                      <div className="flex items-center gap-3 mb-2">
+                        <p className="text-sm text-dark-muted">{task.message}</p>
+                        {task.status === "completed" && (
+                          <Link
+                            href="/reports"
+                            className="text-xs text-indigo-primary hover:text-indigo-hover whitespace-nowrap"
+                          >
+                            리포트 보기 →
+                          </Link>
+                        )}
+                      </div>
 
                       {/* Progress Bar */}
                       <div className="bg-dark-border rounded-full h-2 overflow-hidden">
@@ -266,9 +334,12 @@ export default function AdminPage() {
                 <strong>📝 자동 분석 기능:</strong> SONNET 모델을 사용하여 종목별 투자
                 리포트를 자동으로 생성합니다.
               </p>
-              <p className="text-xs">
+              <p className="text-xs mb-2">
                 생성된 리포트는 <code className="text-indigo-primary">/reports</code>{" "}
                 디렉토리에 저장됩니다.
+              </p>
+              <p className="text-xs border-t border-dark-border pt-2 text-dark-muted">
+                다음 자동 실행: 매일 11:00 KST (GitHub Actions)
               </p>
             </div>
           </div>

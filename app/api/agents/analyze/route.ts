@@ -9,17 +9,20 @@ interface AnalysisRequest {
 }
 
 // 샘플 회사 정보 (프로덕션에서는 데이터베이스에서 가져옴)
-const COMPANY_INFO: Record<
-  string,
-  { name: string; sector: string; exchange: string }
-> = {
-  "005930.KS": { name: "삼성전자", sector: "반도체", exchange: "KS" },
-  "000660.KS": { name: "SK하이닉스", sector: "반도체", exchange: "KS" },
-  "322000.KS": { name: "피에스케이홀딩스", sector: "반도체", exchange: "KS" },
-  NVDA: { name: "엔비디아", sector: "AI칩", exchange: "" },
-  MRVL: { name: "마벨", sector: "AI칩", exchange: "" },
-  AMAT: { name: "어플라이드머터리얼즈", sector: "반도체장비", exchange: "" },
-  MU: { name: "마이크론", sector: "메모리", exchange: "" },
+const COMPANY_INFO: Record<string, { name: string; sector: string; exchange: string }> = {
+  "005930.KS": { name: "삼성전자", sector: "반도체/메모리", exchange: "KS" },
+  "000660.KS": { name: "SK하이닉스", sector: "반도체/메모리", exchange: "KS" },
+  "322000.KS": { name: "피에스케이홀딩스", sector: "반도체장비", exchange: "KS" },
+  "042700.KS": { name: "한미반도체", sector: "반도체장비", exchange: "KS" },
+  "009150.KS": { name: "삼성전기", sector: "전자부품", exchange: "KS" },
+  "NVDA": { name: "엔비디아", sector: "AI칩/데이터센터", exchange: "US" },
+  "MRVL": { name: "마벨테크놀로지", sector: "AI칩/네트워킹", exchange: "US" },
+  "AMAT": { name: "어플라이드머터리얼즈", sector: "반도체장비", exchange: "US" },
+  "LRCX": { name: "램리서치", sector: "반도체장비", exchange: "US" },
+  "MU": { name: "마이크론테크놀로지", sector: "메모리", exchange: "US" },
+  "ARM": { name: "암홀딩스", sector: "반도체IP", exchange: "US" },
+  "6857.T": { name: "어드밴테스트", sector: "반도체검사장비", exchange: "T" },
+  "8035.T": { name: "도쿄일렉트론", sector: "반도체장비", exchange: "T" },
 };
 
 export async function POST(request: NextRequest) {
@@ -34,7 +37,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const companyInfo = COMPANY_INFO[ticker.toUpperCase()];
+    const companyInfo = COMPANY_INFO[ticker] ?? COMPANY_INFO[ticker.toUpperCase()];
     if (!companyInfo) {
       return NextResponse.json(
         { error: "Unknown ticker", ticker },

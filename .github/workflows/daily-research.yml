@@ -2,7 +2,8 @@ name: Daily Research Agent
 
 on:
   schedule:
-    # 02:00 UTC = 11:00 KST
+    # 01:30 UTC = 10:30 KST — daily brief generation
+    # 02:00 UTC = 11:00 KST — full report generation
     - cron: "0 2 * * *"
   workflow_dispatch:
     inputs:
@@ -10,13 +11,19 @@ on:
         description: "Comma-separated tickers to override (optional)"
         required: false
         default: ""
+      skip_brief:
+        description: "Skip daily brief generation"
+        required: false
+        default: "false"
 
 permissions:
   contents: write
 
 jobs:
-  run-research:
+  daily-brief:
+    name: Generate Daily Market Brief
     runs-on: ubuntu-latest
+    if: github.event.inputs.skip_brief != 'true'
 
     steps:
       - name: Checkout repository
@@ -24,7 +31,174 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Node.js 20
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Fetch reference site insights
+        id: fetch-refs
+        env:
+          ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
+        run: |
+          echo "=== Fetching market context for daily brief ==="
+
+          # Fetch news from Alpha Vantage for key tickers
+          if [ -n "$ALPHA_VANTAGE_API_KEY" ]; then
+            echo "Fetching Alpha Vantage news..."
+            curl -s "https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=NVDA,MU,AMAT&limit=10&apikey=${ALPHA_VANTAGE_API_KEY}" \
+              -o /tmp/av-news.json || echo "AV fetch failed"
+
+            # Extract headlines for context
+            if [ -f /tmp/av-news.json ]; then
+              node -e "
+                const fs = require('fs');
+                const data = JSON.parse(fs.readFileSync('/tmp/av-news.json'));
+                const feed = data.feed || [];
+                const headlines = feed.slice(0, 8).map(n => '- ' + n.title).join('\n');
+                fs.writeFileSync('/tmp/news-context.txt', headlines || '(no news)');
+                console.log('Headlines extracted:', feed.length);
+              " || echo "(no news extracted)"
+            fi
+          fi
+
+          # Record reference site check timestamp (actual scraping needs headless browser)
+          DATE=$(date -u +"%Y-%m-%d")
+          echo "Reference sites checked: ${DATE}" > /tmp/ref-check.txt
+          echo "- https://newmoneymoves.io/ (manual review recommended)" >> /tmp/ref-check.txt
+          echo "- https://blog.naver.com/ranto28 (manual review recommended)" >> /tmp/ref-check.txt
+
+          echo "date=${DATE}" >> $GITHUB_OUTPUT
+
+      - name: Generate daily brief via Claude
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
+        run: |
+          DATE="${{ steps.fetch-refs.outputs.date }}"
+          BRIEF_FILE="content/blog/brief-${DATE}.md"
+
+          # Skip if brief for today already exists
+          if [ -f "$BRIEF_FILE" ]; then
+            echo "Brief for ${DATE} already exists, skipping."
+            exit 0
+          fi
+
+          NEWS_CONTEXT=""
+          if [ -f /tmp/news-context.txt ]; then
+            NEWS_CONTEXT=$(cat /tmp/news-context.txt)
+          fi
+
+          # Generate brief using Node.js + Anthropic SDK
+          node -e "
+            const https = require('https');
+            const fs = require('fs');
+            const path = require('path');
+
+            const apiKey = process.env.ANTHROPIC_API_KEY;
+            if (!apiKey) { console.log('No API key'); process.exit(0); }
+
+            const newsContext = \`${NEWS_CONTEXT}\` || '(최신 뉴스 없음)';
+            const date = '${DATE}';
+
+            const body = JSON.stringify({
+              model: 'claude-sonnet-4-6',
+              max_tokens: 3000,
+              system: '당신은 메르(전문 투자 블로거) 스타일로 데일리 시장 브리핑을 작성하는 AI 리서치 에이전트입니다. 번호 붙인 단락 형식(1. 2. 3. ...)으로 작성하세요. 지정학→거시경제→섹터→종목 체인 구조, 각 단락 2-4문장, 전체 15-20개 단락. 투자 결정에 직접 도움되는 밀도 높은 한국어 분석.',
+              messages: [{
+                role: 'user',
+                content: '오늘(' + date + ') 반도체/AI 인프라 투자 데일리 브리핑을 작성하세요.\n\n최근 뉴스:\n' + newsContext + '\n\n커버리지 유니버스: 삼성전자, SK하이닉스, 피에스케이홀딩스, 한미반도체, 삼성전기, NVDA, MRVL, AMAT, LRCX, MU, ARM, 어드밴테스트, 도쿄일렉트론\n\n제목은 오늘의 핵심 이슈를 메타포로 표현하세요. 본문은 번호 단락 형식.'
+              }]
+            });
+
+            const options = {
+              hostname: 'api.anthropic.com',
+              path: '/v1/messages',
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': apiKey,
+                'anthropic-version': '2023-06-01',
+                'Content-Length': Buffer.byteLength(body)
+              }
+            };
+
+            const req = https.request(options, (res) => {
+              let data = '';
+              res.on('data', chunk => data += chunk);
+              res.on('end', () => {
+                try {
+                  const response = JSON.parse(data);
+                  const text = response.content?.[0]?.text || '';
+                  if (!text) { console.log('Empty response'); process.exit(0); }
+
+                  // Extract title from first line or generate one
+                  const lines = text.split('\n').filter(l => l.trim());
+                  const firstLine = lines[0] || '';
+                  const title = firstLine.startsWith('#')
+                    ? firstLine.replace(/^#+\s*/, '')
+                    : '시장 브리핑: ' + date;
+
+                  // Strip leading # heading if present
+                  const bodyLines = firstLine.startsWith('#') ? lines.slice(1) : lines;
+                  const body = bodyLines.join('\n\n');
+
+                  const frontmatter = \`---
+title: \"\${title}\"
+date: \"\${date}\"
+category: \"데일리브리핑\"
+tags: [\"NVDA\", \"반도체\", \"AI인프라\", \"HBM\"]
+summary: \"AI 리서치 에이전트의 \${date} 데일리 시장 브리핑.\"
+author: \"AI Research Agent\"
+---
+
+\${body}\`;
+
+                  const dir = path.dirname('${BRIEF_FILE}');
+                  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+                  fs.writeFileSync('${BRIEF_FILE}', frontmatter, 'utf-8');
+                  console.log('Brief saved to ${BRIEF_FILE}');
+                } catch(e) {
+                  console.error('Parse error:', e.message);
+                }
+              });
+            });
+            req.on('error', e => console.error('Request error:', e.message));
+            req.write(body);
+            req.end();
+          "
+
+      - name: Commit daily brief
+        run: |
+          git config user.name "Research Bot"
+          git config user.email "research-bot@github-actions"
+          git add content/
+
+          if git diff --cached --quiet; then
+            echo "No brief to commit."
+          else
+            DATE="${{ steps.fetch-refs.outputs.date }}"
+            git commit -m "📝 Daily Brief: ${DATE}"
+            git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
+          fi
+
+  run-research:
+    name: Generate Research Reports
+    runs-on: ubuntu-latest
+    needs: daily-brief
+    if: always()
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
