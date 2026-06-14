@@ -5,7 +5,20 @@
       "Bash(git init:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git config:*)"
+      "Bash(git config:*)",
+      "Bash(grep -E '^d|\\\\.json$|\\\\.ts|\\\\.tsx')",
+      "Bash(git -C /c/research-agent/research-site log --oneline)",
+      "Bash(npm install:*)",
+      "WebFetch(domain:newmoneymoves.io)",
+      "WebFetch(domain:blog.naver.com)",
+      "WebFetch(domain:m.blog.naver.com)",
+      "WebFetch(domain:search.naver.com)",
+      "WebSearch",
+      "WebFetch(domain:www.ndex.kr)",
+      "WebFetch(domain:feeder.co)",
+      "WebFetch(domain:brunch.co.kr)",
+      "WebFetch(domain:namu.wiki)",
+      "Bash(git rm:*)"
     ]
   }
 }

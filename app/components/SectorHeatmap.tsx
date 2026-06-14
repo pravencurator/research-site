@@ -29,6 +29,11 @@ export default function SectorHeatmap() {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<string>("");
 
+  // 필터링 상태
+  const [selectedSectors, setSelectedSectors] = useState<string[]>([]);
+  const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState<"change" | "marketCap">("change");
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -64,11 +69,57 @@ export default function SectorHeatmap() {
     return () => clearInterval(interval);
   }, []);
 
+  // 필터링된 데이터 계산
+  const getFilteredData = () => {
+    let filtered = [...data];
+
+    // 섹터 필터
+    if (selectedSectors.length > 0) {
+      filtered = filtered.filter((item) => selectedSectors.includes(item.sector));
+    }
+
+    // 지역 필터
+    if (selectedRegions.length > 0) {
+      filtered = filtered.filter((item) => selectedRegions.includes(item.region));
+    }
+
+    // 정렬
+    filtered.sort((a, b) => {
+      if (sortBy === "change") {
+        return b.changePercent - a.changePercent;
+      } else {
+        return b.marketCap - a.marketCap;
+      }
+    });
+
+    return filtered;
+  };
+
+  const filteredData = getFilteredData();
+  const allSectors = Array.from(new Set(data.map((item) => item.sector)));
+  const allRegions = Array.from(new Set(data.map((item) => item.region)));
+
+  const toggleSector = (sector: string) => {
+    setSelectedSectors((prev) =>
+      prev.includes(sector)
+        ? prev.filter((s) => s !== sector)
+        : [...prev, sector]
+    );
+  };
+
+  const toggleRegion = (region: string) => {
+    setSelectedRegions((prev) =>
+      prev.includes(region)
+        ? prev.filter((r) => r !== region)
+        : [...prev, region]
+    );
+  };
+
   useEffect(() => {
-    if (!data.length || !svgRef.current) return;
+    if (!filteredData.length || !svgRef.current) return;
 
     drawTreemap();
-  }, [data]);
+  }, [filteredData]);
 
   const setSampleData = () => {
     const sampleData: HeatmapData[] = [
@@ -157,7 +208,7 @@ export default function SectorHeatmap() {
   };
 
   const drawTreemap = () => {
-    if (!svgRef.current || !data.length) return;
+    if (!svgRef.current || !filteredData.length) return;
 
     const width = svgRef.current.clientWidth;
     const height = svgRef.current.clientHeight;
@@ -165,7 +216,7 @@ export default function SectorHeatmap() {
     // 데이터 계층 구조 생성
     const hierarchyData = {
       name: "Market",
-      children: data.map((item) => ({
+      children: filteredData.map((item) => ({
         name: item.name,
         value: Math.max(item.marketCap, 1000000000), // 최소값 보장
         changePercent: item.changePercent,
@@ -343,6 +394,100 @@ ${d.data.name} (${d.data.symbol})
         </div>
       </div>
 
+      {/* Filters */}
+      <div className="border-b border-dark-border bg-dark-surface/50 px-6 py-4">
+        <div className="max-w-7xl mx-auto space-y-4">
+          {/* Filter Controls */}
+          <div className="flex flex-col sm:flex-row gap-6 text-sm">
+            {/* Sectors */}
+            <div className="flex-1">
+              <label className="text-xs text-dark-muted font-semibold block mb-2">
+                섹터
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {allSectors.map((sector) => (
+                  <button
+                    key={sector}
+                    onClick={() => toggleSector(sector)}
+                    className={`px-3 py-1 rounded-full border text-xs font-medium transition-colors ${
+                      selectedSectors.includes(sector)
+                        ? "bg-indigo-primary text-white border-indigo-primary"
+                        : "bg-dark-bg border-dark-border text-dark-fg hover:border-indigo-primary/50"
+                    }`}
+                  >
+                    {sector}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Regions */}
+            <div className="flex-1">
+              <label className="text-xs text-dark-muted font-semibold block mb-2">
+                지역
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {allRegions.map((region) => (
+                  <button
+                    key={region}
+                    onClick={() => toggleRegion(region)}
+                    className={`px-3 py-1 rounded-full border text-xs font-medium transition-colors ${
+                      selectedRegions.includes(region)
+                        ? "bg-indigo-primary text-white border-indigo-primary"
+                        : "bg-dark-bg border-dark-border text-dark-fg hover:border-indigo-primary/50"
+                    }`}
+                  >
+                    {region}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Sort */}
+            <div className="flex-1">
+              <label className="text-xs text-dark-muted font-semibold block mb-2">
+                정렬
+              </label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setSortBy("change")}
+                  className={`flex-1 px-3 py-1 rounded border text-xs font-medium transition-colors ${
+                    sortBy === "change"
+                      ? "bg-indigo-primary text-white border-indigo-primary"
+                      : "bg-dark-bg border-dark-border text-dark-fg hover:border-indigo-primary/50"
+                  }`}
+                >
+                  등락률순
+                </button>
+                <button
+                  onClick={() => setSortBy("marketCap")}
+                  className={`flex-1 px-3 py-1 rounded border text-xs font-medium transition-colors ${
+                    sortBy === "marketCap"
+                      ? "bg-indigo-primary text-white border-indigo-primary"
+                      : "bg-dark-bg border-dark-border text-dark-fg hover:border-indigo-primary/50"
+                  }`}
+                >
+                  시총순
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Reset Filters */}
+          {(selectedSectors.length > 0 || selectedRegions.length > 0) && (
+            <button
+              onClick={() => {
+                setSelectedSectors([]);
+                setSelectedRegions([]);
+              }}
+              className="text-xs text-indigo-primary hover:text-indigo-hover"
+            >
+              필터 초기화
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Legend */}
       <div className="border-b border-dark-border bg-dark-bg px-6 py-4">
         <div className="max-w-7xl mx-auto flex flex-wrap gap-6 text-xs">
@@ -382,7 +527,7 @@ ${d.data.name} (${d.data.symbol})
             </div>
           )}
 
-          {data.length > 0 && (
+          {filteredData.length > 0 ? (
             <div className="bg-dark-surface border border-dark-border rounded-lg overflow-hidden">
               <svg
                 ref={svgRef}
@@ -390,30 +535,34 @@ ${d.data.name} (${d.data.symbol})
                 style={{ height: "600px", background: "#0d1117" }}
               ></svg>
             </div>
-          )}
+          ) : data.length > 0 ? (
+            <div className="bg-dark-surface border border-dark-border rounded-lg p-6 text-center">
+              <p className="text-dark-muted">선택한 필터에 해당하는 종목이 없습니다</p>
+            </div>
+          ) : null}
 
           {/* Stats */}
-          {data.length > 0 && (
+          {filteredData.length > 0 && (
             <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
               {[
                 {
                   label: "상승",
-                  value: data.filter((d) => d.changePercent > 0).length,
+                  value: filteredData.filter((d) => d.changePercent > 0).length,
                   color: "status-up",
                 },
                 {
                   label: "하락",
-                  value: data.filter((d) => d.changePercent < 0).length,
+                  value: filteredData.filter((d) => d.changePercent < 0).length,
                   color: "status-down",
                 },
                 {
                   label: "평균 등락률",
-                  value: `${(data.reduce((sum, d) => sum + d.changePercent, 0) / data.length).toFixed(2)}%`,
+                  value: `${(filteredData.reduce((sum, d) => sum + d.changePercent, 0) / filteredData.length).toFixed(2)}%`,
                   color: "indigo-primary",
                 },
                 {
-                  label: "총 종목",
-                  value: data.length,
+                  label: "종목수",
+                  value: filteredData.length,
                   color: "muted",
                 },
               ].map((stat, idx) => (

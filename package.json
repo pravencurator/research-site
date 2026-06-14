@@ -6,17 +6,23 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "research": "npx ts-node --project tsconfig.scripts.json scripts/daily-research.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.27.3",
     "d3": "^7.9.0",
+    "date-fns": "^3.6.0",
     "gray-matter": "^4.0.3",
     "lightweight-charts": "^5.2.0",
+    "lodash-es": "^4.17.21",
     "next": "16.2.9",
     "next-mdx-remote": "^6.0.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "yahoo-finance2": "^3.15.3"
+    "react-hot-toast": "^2.4.1",
+    "yahoo-finance2": "^3.15.3",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -27,6 +33,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "tailwindcss": "^4",
+    "ts-node": "^10.9.2",
     "typescript": "^5"
   }
 }

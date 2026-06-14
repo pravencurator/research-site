@@ -9,8 +9,9 @@ export default function Navbar() {
   const links = [
     { href: "/", label: "홈", icon: "🏠" },
     { href: "/reports", label: "리포트", icon: "📊" },
-    { href: "/terminal", label: "터미널", icon: "⌨️" },
+    { href: "/themes", label: "테마", icon: "🎯" },
     { href: "/heatmap", label: "히트맵", icon: "🔥" },
+    { href: "/admin", label: "에이전트", icon: "🤖" },
   ];
 
   return (

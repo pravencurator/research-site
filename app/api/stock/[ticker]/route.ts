@@ -34,10 +34,10 @@ async function fetchHistoricalData(
   period: string = "1Y"
 ): Promise<HistoricalData[]> {
   try {
-    // .KS 접미사 처리 (한국 종목)
-    const symbol = ticker.toUpperCase().includes(".KS")
-      ? ticker
-      : ticker + ".KS";
+    // 한국 종목 자동 감지 및 .KS 추가
+    const cleaned = ticker.toUpperCase().replace(".KS", "");
+    const isKorean = /^\d{6}$/.test(cleaned);
+    const symbol = isKorean ? `${cleaned}.KS` : ticker.toUpperCase();
 
     const config = PERIOD_CONFIG[period] || PERIOD_CONFIG["1Y"];
 
@@ -47,13 +47,33 @@ async function fetchHistoricalData(
     startDate.setDate(startDate.getDate() - config.days);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result: any = await yahooFinance.historical(symbol, {
-      period1: startDate,
-      period2: endDate,
-      interval: config.interval,
-    });
+    let result: any = null;
+
+    // 재시도 로직 (최대 2회)
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        result = await yahooFinance.historical(symbol, {
+          period1: startDate,
+          period2: endDate,
+          interval: config.interval,
+        });
+
+        if (result && result.length > 0) {
+          break;
+        }
+      } catch (error) {
+        console.warn(
+          `Attempt ${attempt + 1} failed for ${symbol}:`,
+          error instanceof Error ? error.message : "Unknown error"
+        );
+        if (attempt < 1) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+      }
+    }
 
     if (!result || result.length === 0) {
+      console.warn(`No historical data found for ${symbol}`);
       return [];
     }
 

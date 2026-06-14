@@ -1,0 +1,56 @@
+name: Daily Research Agent
+
+on:
+  schedule:
+    # 02:00 UTC = 11:00 KST
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+    inputs:
+      tickers:
+        description: "Comma-separated tickers to override (optional)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  run-research:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run daily research script
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
+          OVERRIDE_TICKERS: ${{ github.event.inputs.tickers }}
+        run: npm run research
+
+      - name: Commit generated reports
+        run: |
+          git config user.name "Research Bot"
+          git config user.email "research-bot@github-actions"
+
+          git add reports/ data/
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            DATE=$(date -u +"%Y-%m-%d")
+            git commit -m "🤖 Daily Research Update: ${DATE}"
+            git push origin HEAD
+          fi
