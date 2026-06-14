@@ -42,9 +42,11 @@ export interface ResearchContext {
 // ---------------------------------------------------------------------------
 
 async function fetchPriceData(ticker: string): Promise<PriceData> {
-  // Dynamic import so this file works in both CJS (ts-node) and ESM contexts
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const yahooFinance = require("yahoo-finance2").default as typeof import("yahoo-finance2").default;
+  // yahoo-finance2 v3: requires instantiation
+  // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-explicit-any
+  const YFClass = require("yahoo-finance2").default as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const yahooFinance: any = new YFClass();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const quote: any = await yahooFinance.quote(ticker);
@@ -132,8 +134,11 @@ async function fetchYahooNews(
   ticker: string,
   limit = 10
 ): Promise<NewsItem[]> {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const yahooFinance = require("yahoo-finance2").default as typeof import("yahoo-finance2").default;
+  // yahoo-finance2 v3: requires instantiation
+  // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-explicit-any
+  const YFClass = require("yahoo-finance2").default as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const yahooFinance: any = new YFClass();
 
   try {
     const result = await (yahooFinance as unknown as {

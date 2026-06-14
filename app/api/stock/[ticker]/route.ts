@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import yahooFinance from "yahoo-finance2";
+import yahooFinance from "@/lib/data-sources/yahoo-finance";
 
 interface HistoricalData {
   date: string;
