@@ -11,7 +11,7 @@ interface NewHighStock {
   high52Week: number;
   low52Week: number;
   changePercent: number;
-  marketCapB: number;
+  marketCapT: number;
   isBreakthrough: boolean;
   proximityPct: number;
 }
@@ -219,9 +219,9 @@ export default function NewHighsWidget() {
                   <div className="text-xs text-dark-muted">
                     52W 고가: {formatPrice(stock.high52Week)}
                   </div>
-                  {stock.marketCapB > 0 && (
+                  {stock.marketCapT > 0 && (
                     <div className="text-xs text-dark-muted">
-                      시총 {formatMarketCap(stock.marketCapB)}
+                      시총 {formatMarketCap(stock.marketCapT)}
                     </div>
                   )}
                 </div>

@@ -192,6 +192,7 @@ export async function GET() {
         data,
         total: data.length,
         watchlistSize: KOREAN_WATCHLIST.length,
+        timestamp: new Date().toISOString(),
       },
       {
         headers: {
