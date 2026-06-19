@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "research": "npx ts-node --project tsconfig.scripts.json scripts/daily-research.ts"
+    "research": "npx ts-node --project tsconfig.scripts.json scripts/daily-research.ts",
+    "fetch-krx": "npx ts-node --project tsconfig.scripts.json scripts/fetch-krx-universe.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.3",
