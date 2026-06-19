@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getAllReports } from "@/lib/reports";
+import TodaysRealMessageWidget from "@/app/components/TodaysRealMessageWidget";
 
 // 13개 핵심 투자 테마 정의
 const THEMES = [
@@ -103,6 +104,15 @@ export default function Home() {
             </span>
           </div>
           <BreakingNewsSection />
+        </div>
+      </section>
+
+      {/* ─────────────────────────────────────────────
+          TODAY'S REAL MESSAGE
+      ───────────────────────────────────────────── */}
+      <section className="border-b border-dark-border bg-dark-bg">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <TodaysRealMessageWidget />
         </div>
       </section>
 

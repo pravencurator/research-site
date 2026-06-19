@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import yahooFinance from "@/lib/data-sources/yahoo-finance";
+import { clusterNews, type NewsCluster } from "@/lib/news-clusters";
 
 // ─────────────────────────────────────────────
 // Types
@@ -15,7 +16,11 @@ export interface NewsItem {
   severity: "critical" | "high" | "normal";
   tickers?: string[];
   sentiment?: "bullish" | "bearish" | "neutral";
+  /** Set when the item belongs to a cluster with ≥ 2 matching headlines */
+  clusterTag?: string;
 }
+
+export type { NewsCluster };
 
 // ─────────────────────────────────────────────
 // Fallback curated news
@@ -339,10 +344,14 @@ export async function GET() {
       );
     });
 
+    // ── Clustering step ──────────────────────────────────────
+    const { tagged, clusters } = clusterNews(combined.slice(0, 30));
+
     return NextResponse.json(
       {
         success: true,
-        data: combined.slice(0, 30),
+        data: tagged,
+        clusters,
         count: combined.length,
         fallback: usedFallback,
         timestamp: new Date().toISOString(),
@@ -356,10 +365,12 @@ export async function GET() {
   } catch (error) {
     console.error("News API error:", error);
 
+    const { tagged: fbTagged, clusters: fbClusters } = clusterNews(buildFallbackNews());
     return NextResponse.json(
       {
         success: true,
-        data: buildFallbackNews(),
+        data: fbTagged,
+        clusters: fbClusters,
         count: FALLBACK_NEWS_RAW.length,
         fallback: true,
         timestamp: new Date().toISOString(),
