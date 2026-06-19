@@ -12,6 +12,7 @@ export default function Navbar() {
     { href: "/reports", label: "리포트", icon: "📊" },
     { href: "/themes", label: "테마", icon: "🎯" },
     { href: "/heatmap", label: "히트맵", icon: "🔥" },
+    { href: "/screener", label: "신고가🚀", icon: "🚀" },
     { href: "/terminal", label: "터미널", icon: "💻" },
     { href: "/admin", label: "에이전트", icon: "🤖" },
   ];
